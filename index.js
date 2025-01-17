@@ -1,7 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
-import { open } from 'sqlite';
+import 'dotenv/config';
 
 // Токен Telegram-бота
 const TOKEN = process.env.TOKEN;
