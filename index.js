@@ -6,36 +6,30 @@ import express from 'express';
 
 // Создаём HTTP-сервер
 const app = express();
-
-// Фиктивный маршрут для проверки работоспособности
 app.get('/', (req, res) => {
     res.send('Bot is running!');
 });
-
-// Слушаем порт (порт предоставляется Render через process.env.PORT)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`HTTP server running on port ${PORT}`);
 });
 
-// Токен Telegram-бота
+// Переменные окружения
 const TOKEN = process.env.TOKEN;
-const bot = new TelegramBot(TOKEN, { polling: true });
-
-// ID вашего канала
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const CHANNEL_USERNAME = '@faceclinicmoscowchannel';
 
-// Telegram ID администратора для уведомлений
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID; // Замените на ваш Telegram ID
+if (!TOKEN || !ADMIN_CHAT_ID) {
+    console.error('❌ Не удалось найти переменные окружения TOKEN или ADMIN_CHAT_ID.');
+    process.exit(1);
+}
+
+const bot = new TelegramBot(TOKEN, { polling: true });
 
 // Подключение к базе данных
 const db = new Database('./certificates.db', { verbose: console.log });
 
-initializeDatabase();
-
-// Инициализация базы данных
 function initializeDatabase() {
-    // Синхронное выполнение SQL-команды для создания таблицы
     db.exec(`
         CREATE TABLE IF NOT EXISTS certificates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,39 +42,34 @@ function initializeDatabase() {
     `);
     console.log('Database initialized');
 }
+initializeDatabase();
 
-// Генерация уникального номера сертификата
 function generateCertificateNumber() {
-    const uniqueId = crypto.randomBytes(4).toString('hex').toUpperCase();
-    return `Tel2025-${uniqueId}`;
+    return `Tel2025-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 }
 
-// Проверка подписки на канал
 async function checkSubscription(userId) {
     try {
         const chatMember = await bot.getChatMember(CHANNEL_USERNAME, userId);
         return ['member', 'creator', 'administrator'].includes(chatMember.status);
     } catch (error) {
         console.error('Error checking subscription:', error);
-        return false;
+        return null;
     }
 }
 
-// Проверка наличия сертификата
-async function getCertificate(userId) {
+function getCertificate(userId) {
     try {
-        const db = await dbPromise;
-        const result = await db.get(`
+        const result = db.prepare(`
             SELECT certificate_number FROM certificates WHERE telegram_id = ?
-        `, [userId]);
-        return result?.certificate_number || null;
+        `).get(userId);
+        return result ? result.certificate_number : null;
     } catch (error) {
         console.error('Error checking certificate:', error);
         return null;
     }
 }
 
-// Уведомление администратора
 async function notifyAdmin(certificateNumber, user, name, phone) {
     const userInfo = `
 🔔 Новый сертификат выдан!
@@ -99,10 +88,8 @@ async function notifyAdmin(certificateNumber, user, name, phone) {
     }
 }
 
-// Хранение промежуточных данных
 const userProgress = {};
 
-// Обработчик команды /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(chatId, 'Добро пожаловать в FaceClinic! Используйте меню ниже для взаимодействия.', {
@@ -117,17 +104,11 @@ bot.onText(/\/start/, (msg) => {
     });
 });
 
-// Обработчик сообщений
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
 
     if (userProgress[chatId]?.step === 'waitingForName') {
-        if (text === '📜 Получить сертификат') {
-            bot.sendMessage(chatId, 'Вы уже начали процесс ввода данных. Пожалуйста, введите ваше имя, чтобы продолжить.');
-            return;
-        }
-        // Сохранение имени
         userProgress[chatId].name = text;
         userProgress[chatId].step = 'waitingForPhone';
         bot.sendMessage(chatId, 'Пожалуйста, введите ваш номер телефона:');
@@ -135,57 +116,42 @@ bot.on('message', async (msg) => {
     }
 
     if (userProgress[chatId]?.step === 'waitingForPhone') {
-        if (text === '📜 Получить сертификат') {
-            bot.sendMessage(chatId, 'Вы уже начали процесс ввода данных. Пожалуйста, введите ваш номер телефона, чтобы продолжить.');
-            return;
-        }
         const phone = text.trim();
-
-        // Проверка телефона
         const phoneRegex = /^\+?\d{10,15}$/;
+
         if (!phoneRegex.test(phone)) {
-            bot.sendMessage(chatId, `
-❌ Некорректный номер телефона. Пожалуйста, введите номер телефона в международном формате, например: +1234567890.
-            `);
+            bot.sendMessage(chatId, '❌ Некорректный номер телефона. Введите номер в формате +1234567890.');
             return;
         }
 
-        // Сохранение телефона
-        userProgress[chatId].phone = phone;
-        const { name } = userProgress[chatId];
-        userProgress[chatId].step = 'done';
-
-        // Генерация сертификата
+        const name = userProgress[chatId].name;
         const certificateNumber = generateCertificateNumber();
 
         try {
-            const db = await dbPromise;
-            await db.run(`
+            db.prepare(`
                 INSERT INTO certificates (certificate_number, telegram_id, name, phone)
                 VALUES (?, ?, ?, ?)
-            `, [certificateNumber, chatId, name, phone]);
+            `).run(certificateNumber, chatId, name, phone);
 
             const certificateText = `
 🎉 Поздравляем! Вы получили персональный сертификат на сумму 10 000 рублей.
-
 📜 Номер сертификата: ${certificateNumber}
-
-Условия использования сертификата указаны на сайте: https://faceclinicmoscow.com/sertterms
+Условия использования: https://faceclinicmoscow.com/sertterms
             `;
 
             await bot.sendMessage(chatId, certificateText);
             await bot.sendPhoto(chatId, 'https://static.tildacdn.com/stor3330-3636-4632-a235-393765366538/51622874.jpg', {
-                caption: 'Ваш сертификат отправлен! Условия использования указаны на сайте.',
+                caption: 'Ваш сертификат отправлен! Условия указаны на сайте.',
             });
 
             console.log(`Certificate issued: ${certificateNumber} for Telegram ID: ${chatId}`);
             await notifyAdmin(certificateNumber, msg.from, name, phone);
         } catch (error) {
             console.error('Error issuing certificate:', error);
-            bot.sendMessage(chatId, 'Произошла ошибка при выдаче сертификата. Попробуйте позже.');
+            bot.sendMessage(chatId, '❌ Ошибка при выдаче сертификата. Попробуйте позже.');
+        } finally {
+            delete userProgress[chatId];
         }
-
-        delete userProgress[chatId];
         return;
     }
 
@@ -200,29 +166,33 @@ bot.on('message', async (msg) => {
     if (text === '📜 Получить сертификат') {
         const isSubscribed = await checkSubscription(chatId);
 
+        if (isSubscribed === null) {
+            bot.sendMessage(chatId, '❌ Ошибка проверки подписки. Попробуйте позже.');
+            return;
+        }
+
         if (!isSubscribed) {
             bot.sendMessage(chatId, `
 ❌ Вы не подписаны на наш канал.
 Пожалуйста, подпишитесь: [FaceClinic Moscow](https://t.me/${CHANNEL_USERNAME.slice(1)})
 Затем нажмите "📜 Получить сертификат" снова.
             `, { parse_mode: 'Markdown' });
-        } else {
-            const existingCertificate = await getCertificate(chatId);
+            return;
+        }
 
-            if (existingCertificate) {
-                bot.sendMessage(chatId, `
-❗ У вас уже есть сертификат: ${existingCertificate}.
-                `);
-            } else {
-                userProgress[chatId] = { step: 'waitingForName' };
-                bot.sendMessage(chatId, 'Пожалуйста, введите ваше имя:');
-            }
+        const existingCertificate = getCertificate(chatId);
+
+        if (existingCertificate) {
+            bot.sendMessage(chatId, `❗ У вас уже есть сертификат: ${existingCertificate}.`);
+        } else {
+            userProgress[chatId] = { step: 'waitingForName' };
+            bot.sendMessage(chatId, 'Пожалуйста, введите ваше имя:');
         }
         return;
     }
 
     if (text === '✅ Проверить сертификат') {
-        const certificateNumber = await getCertificate(chatId);
+        const certificateNumber = getCertificate(chatId);
 
         if (certificateNumber) {
             const isSubscribed = await checkSubscription(chatId);
@@ -239,9 +209,7 @@ bot.on('message', async (msg) => {
                 `, { parse_mode: 'Markdown' });
             }
         } else {
-            bot.sendMessage(chatId, `
-❌ У вас нет сертификата. Вы можете получить его, нажав "📜 Получить сертификат".
-            `);
+            bot.sendMessage(chatId, '❌ У вас нет сертификата. Нажмите "📜 Получить сертификат".');
         }
         return;
     }
