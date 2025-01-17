@@ -4,14 +4,14 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 
 // Токен Telegram-бота
-const TOKEN = '7922934809:AAFrbHWWtShig5R12WcCrBpHht72XVD9MKQ';
+const TOKEN = process.env.TOKEN;
 const bot = new TelegramBot(TOKEN, { polling: true });
 
 // ID вашего канала
 const CHANNEL_USERNAME = '@faceclinicmoscowchannel';
 
 // Telegram ID администратора для уведомлений
-const ADMIN_CHAT_ID = '641297325'; // Замените на ваш Telegram ID
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID; // Замените на ваш Telegram ID
 
 // Подключение к базе данных
 const dbPromise = open({
