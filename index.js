@@ -2,6 +2,21 @@ import TelegramBot from 'node-telegram-bot-api';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import 'dotenv/config';
+import express from 'express';
+
+// Создаём HTTP-сервер
+const app = express();
+
+// Фиктивный маршрут для проверки работоспособности
+app.get('/', (req, res) => {
+    res.send('Bot is running!');
+});
+
+// Слушаем порт (порт предоставляется Render через process.env.PORT)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`HTTP server running on port ${PORT}`);
+});
 
 // Токен Telegram-бота
 const TOKEN = process.env.TOKEN;
