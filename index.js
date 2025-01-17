@@ -1,6 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
 import crypto from 'crypto';
-import sqlite3 from 'sqlite3';
+import Database from 'better-sqlite3';
 import { open } from 'sqlite';
 
 // Токен Telegram-бота
@@ -14,15 +14,14 @@ const CHANNEL_USERNAME = '@faceclinicmoscowchannel';
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID; // Замените на ваш Telegram ID
 
 // Подключение к базе данных
-const dbPromise = open({
-    filename: './certificates.db',
-    driver: sqlite3.Database,
-});
+const db = new Database('./certificates.db', { verbose: console.log });
+
+initializeDatabase();
 
 // Инициализация базы данных
-async function initializeDatabase() {
-    const db = await dbPromise;
-    await db.exec(`
+function initializeDatabase() {
+    // Синхронное выполнение SQL-команды для создания таблицы
+    db.exec(`
         CREATE TABLE IF NOT EXISTS certificates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             certificate_number TEXT NOT NULL UNIQUE,
@@ -34,7 +33,6 @@ async function initializeDatabase() {
     `);
     console.log('Database initialized');
 }
-initializeDatabase();
 
 // Генерация уникального номера сертификата
 function generateCertificateNumber() {

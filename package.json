@@ -12,9 +12,9 @@
   "type": "module",
   "description": "",
   "dependencies": {
+    "better-sqlite3": "^11.8.0",
     "crypto": "^1.0.1",
     "node-telegram-bot-api": "^0.66.0",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7"
+    "sqlite": "^5.1.1"
   }
 }
