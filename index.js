@@ -3,9 +3,12 @@ import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import 'dotenv/config';
 import express from 'express';
+import axios from 'axios';
+
 
 // Создаём HTTP-сервер
 const app = express();
+
 app.get('/', (req, res) => {
     res.send('Bot is running!');
 });
@@ -13,6 +16,12 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`HTTP server running on port ${PORT}`);
 });
+
+app.post('/webhook', express.json(), (req, res) => {
+    bot.processUpdate(req.body); // Обработка входящих обновлений
+    res.sendStatus(200); // Ответ для Telegram API
+});
+
 
 // Переменные окружения
 const TOKEN = process.env.TOKEN;
@@ -27,7 +36,19 @@ if (!TOKEN || !ADMIN_CHAT_ID) {
     process.exit(1);
 }
 
-const bot = new TelegramBot(TOKEN, { polling: true });
+const bot = new TelegramBot(TOKEN);
+
+const webhookUrl = 'https://faceclinic-production.up.railway.app/webhook';
+axios.post(`https://api.telegram.org/bot${TOKEN}/setWebhook`, {
+    url: webhookUrl
+})
+    .then(response => {
+        console.log('Webhook successfully set:', response.data);
+    })
+    .catch(error => {
+        console.error('Error setting webhook:', error);
+    });
+
 
 // Подключение к базе данных
 const db = new Database('./certificates.db', { verbose: console.log });
