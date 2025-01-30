@@ -64,6 +64,15 @@ axios.post(`https://api.telegram.org/bot${TOKEN}/deleteWebhook`)
         console.error('Error setting webhook:', error);
     });
 
+// После установки вебхука добавьте проверку
+bot.getWebHookInfo().then((info) => {
+    console.log('Webhook info:', info);
+    if (info.url !== webhookUrl) {
+        console.log('Webhook URL не совпадает, переустанавливаем...');
+        return bot.setWebHook(webhookUrl);
+    }
+}).catch(console.error);
+
 // Подключение к базе данных
 const db = new Database('./certificates.db', { verbose: console.log });
 
