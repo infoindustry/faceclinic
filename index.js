@@ -19,6 +19,9 @@ const TOKEN = process.env.TOKEN;
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const CHANNEL_USERNAME = '@faceclinicmoscowchannel';
 
+console.log('TOKEN:', process.env.TOKEN);
+console.log('ADMIN_CHAT_ID:', process.env.ADMIN_CHAT_ID);
+
 if (!TOKEN || !ADMIN_CHAT_ID) {
     console.error('❌ Не удалось найти переменные окружения TOKEN или ADMIN_CHAT_ID.');
     process.exit(1);
