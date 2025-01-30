@@ -36,19 +36,33 @@ if (!TOKEN || !ADMIN_CHAT_ID) {
     process.exit(1);
 }
 
-const bot = new TelegramBot(TOKEN);
+const bot = new TelegramBot(TOKEN, {
+    webHook: {
+        port: PORT
+    }
+});
 
+// Настройка webhook
 const webhookUrl = 'https://faceclinic-production.up.railway.app/webhook';
-axios.post(`https://api.telegram.org/bot${TOKEN}/setWebhook`, {
-    url: webhookUrl
-})
+
+// Удаляем старый webhook перед установкой нового
+axios.post(`https://api.telegram.org/bot${TOKEN}/deleteWebhook`)
+    .then(() => {
+        return axios.post(`https://api.telegram.org/bot${TOKEN}/setWebhook`, {
+            url: webhookUrl
+        });
+    })
     .then(response => {
         console.log('Webhook successfully set:', response.data);
+        // Проверяем информацию о webhook
+        return axios.get(`https://api.telegram.org/bot${TOKEN}/getWebhookInfo`);
+    })
+    .then(response => {
+        console.log('Webhook info:', response.data);
     })
     .catch(error => {
         console.error('Error setting webhook:', error);
     });
-
 
 // Подключение к базе данных
 const db = new Database('./certificates.db', { verbose: console.log });
