@@ -4,6 +4,8 @@ import Database from 'better-sqlite3';
 import 'dotenv/config';
 import express from 'express';
 import axios from 'axios';
+import createWalletPass from './walletPass.js';
+import { setupPhotoAnalysis } from './photoAnalysis.js';
 
 
 // Создаём HTTP-сервер
@@ -39,6 +41,9 @@ const webhookUrl = 'https://faceclinic-production.up.railway.app/webhook';
 
 const bot = new TelegramBot(TOKEN);
 
+// ИИ анализ фото
+
+setupPhotoAnalysis(bot, db, process.env.OPENAI_API_KEY, checkSubscription);
 
 // Настройка webhook
 
@@ -141,6 +146,8 @@ bot.onText(/\/start/, (msg) => {
             keyboard: [
                 ['🔗 Подписаться на канал', '📜 Получить сертификат'],
                 ['✅ Проверить сертификат', 'ℹ️ Помощь'],
+                ['📸 Анализ фото']
+
             ],
             resize_keyboard: true,
             one_time_keyboard: false,
@@ -187,6 +194,19 @@ bot.on('message', async (msg) => {
             await bot.sendPhoto(chatId, 'https://static.tildacdn.com/stor3330-3636-4632-a235-393765366538/51622874.jpg', {
                 caption: 'Ваш сертификат отправлен! Условия указаны на сайте.',
             });
+
+            // Добавляем отправку Apple Wallet pass
+         /*   try {
+                const passBuffer = await createWalletPass(certificateNumber, name);
+                await bot.sendDocument(chatId, passBuffer, {
+                    filename: `FaceClinic-${certificateNumber}.pkpass`,
+                    caption: 'Добавьте ваш сертификат в Apple Wallet'
+                });
+                console.log(`Wallet pass sent for certificate: ${certificateNumber}`);
+            } catch (error) {
+                console.error('Error sending wallet pass:', error);
+                // Продолжаем работу бота, даже если отправка pass не удалась
+            }*/
 
             console.log(`Certificate issued: ${certificateNumber} for Telegram ID: ${chatId}`);
             await notifyAdmin(certificateNumber, msg.from, name, phone);
