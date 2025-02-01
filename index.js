@@ -36,7 +36,7 @@ if (!TOKEN || !ADMIN_CHAT_ID) {
     process.exit(1);
 }
 
-const webhookUrl = 'https://faceclinic-production.up.railway.app/webhook';
+const webhookUrl = 'https://faceclinic-production.up.railway.app/webhook'
 
 
 const bot = new TelegramBot(TOKEN);
