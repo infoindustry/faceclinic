@@ -70,8 +70,9 @@ export class PhotoAnalyzer {
                             },
                             {
                                 type: "image_url",
-                                image_url: photoUrl
-                            }
+                                image_url: {
+                                    url: photoUrl
+                                }                            }
                         ]
                     }
                 ],
