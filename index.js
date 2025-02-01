@@ -43,7 +43,6 @@ const bot = new TelegramBot(TOKEN);
 
 // ИИ анализ фото
 
-setupPhotoAnalysis(bot, db, process.env.OPENAI_API_KEY, checkSubscription);
 
 // Настройка webhook
 
@@ -92,6 +91,9 @@ function initializeDatabase() {
     console.log('Database initialized');
 }
 initializeDatabase();
+
+setupPhotoAnalysis(bot, db, process.env.OPENAI_API_KEY, checkSubscription);
+
 
 function generateCertificateNumber() {
     return `Tel2025-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
