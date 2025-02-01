@@ -35,7 +35,7 @@ export class PhotoAnalyzer {
         this.db.prepare(`
             INSERT INTO photo_analysis (telegram_id, analysis_result)
             VALUES (?, ?)
-        `).run(userId, analysisResult);
+        `).run(parseInt(userId), analysisResult);
     }
 
     async analyzePhoto(photoUrl) {
@@ -48,7 +48,7 @@ export class PhotoAnalyzer {
                         content: [
                             {
                                 type: "text",
-                                text: `Ты эксперт в области эстетической медицины. Проанализируй фотографию лица и предоставь подробный анализ в следующем формате:
+                                text: `Ты эксперт в области лица. Проанализируй фотографию лица и предоставь подробный анализ в следующем формате:
 
 1. Основной тип старения:
 - Какой из типов преобладает: назальный (проблемы в области носа), дентальный (проблемы с зубочелюстной системой) или офтальмологический (проблемы в области глаз)
@@ -141,6 +141,14 @@ export const setupPhotoAnalysis = (bot, db, openaiApiKey, checkSubscription) => 
             await bot.sendMessage(chatId, '🔍 Анализирую ваше фото... Это может занять несколько секунд.');
 
             const analysis = await analyzer.analyzePhoto(fileLink);
+
+            // Проверяем результат анализа
+            console.log('Analysis result:', analysis);
+
+            if (!analysis || analysis.includes('Извините')) {
+                throw new Error('Failed to analyze photo');
+            }
+
             analyzer.recordAnalysis(chatId, analysis);
 
             await bot.sendMessage(chatId, analysis, { parse_mode: 'Markdown' });
