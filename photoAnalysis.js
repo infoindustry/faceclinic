@@ -41,7 +41,7 @@ export class PhotoAnalyzer {
     async analyzePhoto(photoUrl) {
         try {
             const response = await this.openai.chat.completions.create({
-                model: "gpt-4-vision-preview-v1.0",
+                model: "gpt-4o-mini",
                 messages: [
                     {
                         role: "user",
