@@ -40,49 +40,34 @@ export class PhotoAnalyzer {
 
     async analyzePhoto(photoUrl) {
         try {
+            console.log('Starting photo analysis with URL:', photoUrl);
+
             const response = await this.openai.chat.completions.create({
-                model: "gpt-4o-mini",
+                model: "gpt-4o",  // Используем актуальную модель
                 messages: [
                     {
                         role: "user",
                         content: [
                             {
                                 type: "text",
-                                text: `Ты эксперт в области лица. Проанализируй фотографию лица и предоставь подробный анализ в следующем формате:
-
-1. Основной тип старения:
-- Какой из типов преобладает: назальный (проблемы в области носа), дентальный (проблемы с зубочелюстной системой) или офтальмологический (проблемы в области глаз)
-- Обоснуй свой выбор
-
-2. Признаки старения и состояние кожи:
-- Морщины (где расположены, глубина)
-- Носогубные складки
-- Овал лица
-- Текстура и тон кожи
-- Пигментация
-- Другие особенности
-
-3. Рекомендации по процедурам:
-- 2-3 основные процедуры с объяснением их эффекта
-- Порядок приоритетности процедур
-
-Пожалуйста, используй профессиональный, но понятный язык. Объем анализа - примерно 200-250 слов.`
+                                text: "Пожалуйста, опиши что ты видишь на фото, обращая внимание на: \n1. Общие черты лица\n2. Особенности кожи\n3. Заметные асимметрии или характерные черты"
                             },
                             {
                                 type: "image_url",
                                 image_url: {
                                     url: photoUrl
-                                }                            }
+                                }
+                            }
                         ]
                     }
                 ],
-                max_tokens: 1000,
-                temperature: 0.7
+                max_tokens: 1000
             });
 
+            console.log('OpenAI API response:', response);
             return response.choices[0].message.content;
         } catch (error) {
-            console.error('Error analyzing photo:', error);
+            console.error('Detailed API error:', error);
             throw error;
         }
     }
@@ -135,17 +120,29 @@ export const setupPhotoAnalysis = (bot, db, openaiApiKey, checkSubscription) => 
         }
 
         try {
+            console.log('Received photo message:', msg.photo); // Логируем весь массив фото
+
             const photo = msg.photo[msg.photo.length - 1];
+            console.log('Selected photo:', photo); // Логируем выбранное фото
+
             const fileLink = await bot.getFileLink(photo.file_id);
+            console.log('Generated file link:', fileLink); // Логируем полученную ссылку
 
             await bot.sendMessage(chatId, '🔍 Анализирую ваше фото... Это может занять несколько секунд.');
 
-            const analysis = await analyzer.analyzePhoto(fileLink);
+            // Проверяем доступность файла
+            try {
+                const testResponse = await axios.head(fileLink);
+                console.log('File accessibility check:', testResponse.status);
+            } catch (error) {
+                console.error('File accessibility error:', error.message);
+            }
 
-            // Проверяем результат анализа
-            console.log('Analysis result:', analysis);
+            const analysis = await analyzer.analyzePhoto(fileLink);
+            console.log('Raw GPT response:', analysis);  // Логируем сырой ответ от GPT
 
             if (!analysis || analysis.includes('Извините')) {
+                console.error('Analysis failed or returned apology');
                 throw new Error('Failed to analyze photo');
             }
 
@@ -157,13 +154,14 @@ export const setupPhotoAnalysis = (bot, db, openaiApiKey, checkSubscription) => 
 📞 Хотите обсудить результаты с нашими специалистами?
 
 Запишитесь на консультацию:
-☎️ <a href="tel:+79266568808">Позвонить</a>
-💬 <a href="https://api.whatsapp.com/send?phone=79266568808">Написать в WhatsApp</a>
-`, { parse_mode: 'HTML' });
+☎️ [Позвонить](tel:+79266568808)
+💬 [Написать в WhatsApp](https://api.whatsapp.com/send?phone=79266568808)
+        `, { parse_mode: 'Markdown' });
 
         } catch (error) {
-            console.error('Error processing photo:', error);
-            bot.sendMessage(chatId, 'Произошла ошибка при анализе фото. Пожалуйста, попробуйте позже или свяжитесь с нами напрямую.');
+            console.error('Full error object:', error);
+            console.error('Error stack:', error.stack);
+            bot.sendMessage(chatId, 'Произошла ошибка при анализе фото. Пожалуйста, убедитесь что на фото четко видно лицо анфас при хорошем освещении и попробуйте еще раз.');
         } finally {
             userStates.delete(chatId);
         }
