@@ -47,30 +47,51 @@ const bot = new TelegramBot(TOKEN);
 // Настройка webhook
 
 // Удаляем старый webhook перед установкой нового
-axios.post(`https://api.telegram.org/bot${TOKEN}/deleteWebhook`)
-    .then(() => {
-        return axios.post(`https://api.telegram.org/bot${TOKEN}/setWebhook`, {
-            url: webhookUrl
-        });
-    })
-    .then(response => {
-        console.log('Webhook successfully set:', response.data);
-        // Проверяем информацию о webhook
-        return axios.get(`https://api.telegram.org/bot${TOKEN}/getWebhookInfo`);
-    })
-    .then(response => {
-        console.log('Webhook info:', response.data);
-    })
-    .catch(error => {
-        console.error('Error setting webhook:', error);
-    });
+// Функция для установки вебхука с повторными попытками
+async function setupWebhook(retries = 3, delay = 5000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            // Сначала удаляем старый вебхук
+            await axios.post(`https://api.telegram.org/bot${TOKEN}/deleteWebhook`);
+
+            // Ждем немного перед установкой нового
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Устанавливаем новый вебхук
+            const response = await axios.post(`https://api.telegram.org/bot${TOKEN}/setWebhook`, {
+                url: webhookUrl
+            });
+
+            console.log('Webhook successfully set:', response.data);
+
+            // Проверяем информацию о вебхуке
+            const webhookInfo = await axios.get(`https://api.telegram.org/bot${TOKEN}/getWebhookInfo`);
+            console.log('Webhook info:', webhookInfo.data);
+
+            return true; // Успешно установили вебхук
+        } catch (error) {
+            console.error(`Attempt ${i + 1}/${retries} failed:`, error.message);
+
+            if (i < retries - 1) {
+                console.log(`Waiting ${delay/1000} seconds before next attempt...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+                console.error('Failed to set webhook after all retries');
+                throw error;
+            }
+        }
+    }
+}
+
+// Вызываем функцию после объявления
+setupWebhook().catch(console.error);
 
 // После установки вебхука добавьте проверку
 bot.getWebHookInfo().then((info) => {
     console.log('Webhook info:', info);
     if (info.url !== webhookUrl) {
         console.log('Webhook URL не совпадает, переустанавливаем...');
-        return bot.setWebHook(webhookUrl);
+        return setupWebhook();
     }
 }).catch(console.error);
 
