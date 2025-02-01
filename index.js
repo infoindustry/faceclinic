@@ -5,7 +5,9 @@ import 'dotenv/config';
 import express from 'express';
 import axios from 'axios';
 import createWalletPass from './walletPass.js';
+/*
 import { setupPhotoAnalysis } from './photoAnalysis.js';
+*/
 
 
 // Создаём HTTP-сервер
@@ -113,7 +115,9 @@ function initializeDatabase() {
 }
 initializeDatabase();
 
+/*
 setupPhotoAnalysis(bot, db, process.env.OPENAI_API_KEY, checkSubscription);
+*/
 
 
 function generateCertificateNumber() {
@@ -169,7 +173,9 @@ bot.onText(/\/start/, (msg) => {
             keyboard: [
                 ['🔗 Подписаться на канал', '📜 Получить сертификат'],
                 ['✅ Проверить сертификат', 'ℹ️ Помощь'],
+/*
                 ['📸 Анализ фото']
+*/
 
             ],
             resize_keyboard: true,
