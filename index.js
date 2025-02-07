@@ -27,8 +27,7 @@ app.post('/webhook', express.json(), (req, res) => {
 
 // Переменные окружения
 const TOKEN = process.env.TOKEN;
-const ADMIN_CHAT_IDS = process.env.ADMIN_CHAT_ID.split(',').map(id => id.trim());
-console.log('Admin IDs:', ADMIN_CHAT_IDS); // Добавьте эту строку здесь
+const ADMIN_CHAT_IDS = process.env.ADMIN_CHAT_ID.split(';').map(id => id.trim());console.log('Admin IDs:', ADMIN_CHAT_IDS); // Добавьте эту строку здесь
 const CHANNEL_USERNAME = '@faceclinicmoscowchannel';
 
 console.log('TOKEN:', process.env.TOKEN);
