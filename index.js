@@ -125,176 +125,154 @@ function restoreData() {
             name: 'Игорь',
             phone: '+79031813591',
             certificate_number: 'Tel2025-C14A4960',
-            telegram_id: '409036058',
-            username: null
+            telegram_id: '409036058'
         },
         {
             date: '2025-02-18',
             name: 'Нина',
             phone: '89801468718',
             certificate_number: 'Tel2025-AFCA1A44',
-            telegram_id: '970819446',
-            username: 'Sorgue'
+            telegram_id: '970819446'
         },
         {
             date: '2025-02-18',
             name: 'Екатерина',
             phone: '89164159118',
             certificate_number: 'Tel2025-B4DF23E1',
-            telegram_id: '108212039',
-            username: 'bazilevskayakate'
+            telegram_id: '108212039'
         },
         {
             date: '2025-02-18',
             name: 'Наталия',
             phone: '79152992666',
             certificate_number: 'Tel2025-F5790714',
-            telegram_id: '1228610222',
-            username: null
+            telegram_id: '1228610222'
         },
         {
             date: '2025-02-18',
             name: 'Мария',
             phone: '+79268661316',
             certificate_number: 'Tel2025-05E19C80',
-            telegram_id: '941632154',
-            username: 'rirakkumameow'
+            telegram_id: '941632154'
         },
         {
             date: '2025-02-18',
             name: 'Екатерина',
             phone: '89652029282',
             certificate_number: 'Tel2025-2EEAD48C',
-            telegram_id: '749015499',
-            username: 'EkaterinaKarpishuk'
+            telegram_id: '749015499'
         },
         {
             date: '2025-02-18',
             name: 'Olga',
             phone: '9262066893',
             certificate_number: 'Tel2025-1699CA6F',
-            telegram_id: '488423584',
-            username: 'Olga_Ulyana'
+            telegram_id: '488423584'
         },
         {
             date: '2025-02-18',
             name: 'Алина',
             phone: '89771178757',
             certificate_number: 'Tel2025-64A28B3C',
-            telegram_id: '536178570',
-            username: null
+            telegram_id: '536178570'
         },
         {
             date: '2025-02-18',
             name: 'Анна',
             phone: '89775838104',
             certificate_number: 'Tel2025-280630B7',
-            telegram_id: '668415255',
-            username: 'annileon'
+            telegram_id: '668415255'
         },
         {
             date: '2025-02-18',
             name: 'Ксения',
             phone: '9161225057',
             certificate_number: 'Tel2025-80EF6DF9',
-            telegram_id: '784523368',
-            username: null
+            telegram_id: '784523368'
         },
         {
             date: '2025-02-18',
             name: 'Елизавета',
             phone: '89157626833',
             certificate_number: 'Tel2025-772FFB45',
-            telegram_id: '1701911729',
-            username: 'Eliss_tss'
+            telegram_id: '1701911729'
         },
         {
             date: '2025-02-18',
             name: 'Анастасия',
             phone: '89015685326',
             certificate_number: 'Tel2025-9BC8B50E',
-            telegram_id: '1534410963',
-            username: 'Anastasiia199226'
+            telegram_id: '1534410963'
         },
         {
             date: '2025-02-18',
             name: 'Ольга',
             phone: '+4917680448476',
             certificate_number: 'Tel2025-DA3DB649',
-            telegram_id: '487559052',
-            username: 'lady_vlada'
+            telegram_id: '487559052'
         },
         {
             date: '2025-02-18',
             name: 'Мая',
             phone: '+79151879142',
             certificate_number: 'Tel2025-DDB551CA',
-            telegram_id: '5060919326',
-            username: 'Farik2081'
+            telegram_id: '5060919326'
         },
         {
             date: '2025-02-18',
             name: 'Юсиф',
             phone: '+994773772799',
             certificate_number: 'Tel2025-FF210317',
-            telegram_id: '5846870012',
-            username: 'Yusifkerim05'
+            telegram_id: '5846870012'
         },
         {
             date: '2025-02-18',
             name: 'Елена Панова',
             phone: '+79122775544',
             certificate_number: 'Tel2025-E290CDF3',
-            telegram_id: '1100585822',
-            username: null
+            telegram_id: '1100585822'
         },
         {
             date: '2025-02-18',
             name: 'Артём',
             phone: '89091433726',
             certificate_number: 'Tel2025-7346F2CD',
-            telegram_id: '1623101883',
-            username: 'Growvx'
+            telegram_id: '1623101883'
         },
         {
             date: '2025-02-18',
             name: 'Серебрякова',
             phone: '89161973716',
             certificate_number: 'Tel2025-A190744E',
-            telegram_id: '7195810799',
-            username: null
+            telegram_id: '7195810799'
         },
         {
             date: '2025-02-18',
             name: 'Сергей',
             phone: '89111778815',
             certificate_number: 'Tel2025-EB36F988',
-            telegram_id: '399442019',
-            username: 'yolochkas'
+            telegram_id: '399442019'
         },
         {
             date: '2025-02-18',
             name: 'Алёна Смолина',
             phone: '+79254159331',
             certificate_number: 'Tel2025-E693252C',
-            telegram_id: '1924907932',
-            username: 'gray_alice'
+            telegram_id: '1924907932'
         },
         {
             date: '2025-02-18',
             name: 'Анастасия',
             phone: '89661456190',
             certificate_number: 'Tel2025-98A33ACB',
-            telegram_id: '413945477',
-            username: 'Anastasia_VisaSupport'
+            telegram_id: '413945477'
         },
         {
             date: '2025-02-18',
             name: 'Снах',
             phone: '+79055177111',
             certificate_number: 'Tel2025-CFF7EBF5',
-            telegram_id: '864021898',
-            username: 'AAAl111'
+            telegram_id: '864021898'
         }
     ];
 
