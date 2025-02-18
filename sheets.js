@@ -81,6 +81,9 @@ export async function syncAllCertificates(db) {
             ORDER BY created_at DESC
         `).all();
 
+        console.log('Total certificates in database:', certificates.length);
+        console.log('First few certificates:', certificates.slice(0, 3));
+
         // Подготавливаем данные для Google Sheets
         const values = certificates.map(cert => [
             cert.certificate_number,
@@ -89,6 +92,8 @@ export async function syncAllCertificates(db) {
             cert.phone || '',
             new Date(cert.created_at).toLocaleString('ru-RU'),
         ]);
+
+        console.log('Prepared values for sheets:', values.length);
 
         // Сначала очищаем существующие данные
         await sheets.spreadsheets.values.clear({
@@ -111,6 +116,10 @@ export async function syncAllCertificates(db) {
         return true;
     } catch (error) {
         console.error('Error syncing with Google Sheets:', error);
+        console.error('Error details:', error.message);
+        if (error.response) {
+            console.error('API Response:', error.response.data);
+        }
         return false;
     }
 }
