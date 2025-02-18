@@ -4,6 +4,8 @@ import Database from 'better-sqlite3';
 import 'dotenv/config';
 import express from 'express';
 import axios from 'axios';
+import { addCertificateToSheet, syncAllCertificates, setupGoogleSheet } from './sheets.js';
+
 import createWalletPass from './walletPass.js';
 /*
 import { setupPhotoAnalysis } from './photoAnalysis.js';
@@ -115,10 +117,16 @@ function initializeDatabase() {
 }
 initializeDatabase();
 
+setupGoogleSheet().then(() => {
+    console.log('Google Sheets integration ready');
+}).catch(console.error);
+
 /*
 setupPhotoAnalysis(bot, db, process.env.OPENAI_API_KEY, checkSubscription);
 */
-
+function isAdmin(chatId) {
+    return ADMIN_CHAT_IDS.includes(chatId.toString());
+}
 
 function generateCertificateNumber() {
     return `Tel2025-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
@@ -171,21 +179,36 @@ const userProgress = {};
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Добро пожаловать в FaceClinic! Используйте меню ниже для взаимодействия.', {
-        reply_markup: {
-            keyboard: [
-                ['🔗 Подписаться на канал', '📜 Получить сертификат'],
-                ['✅ Проверить сертификат', 'ℹ️ Помощь'],
-/*
-                ['📸 Анализ фото']
-*/
+    const isAdminUser = isAdmin(chatId);
 
-            ],
+    // Базовая клавиатура для всех пользователей
+    const baseKeyboard = [
+        ['🔗 Подписаться на канал', '📜 Получить сертификат'],
+        ['✅ Проверить сертификат', 'ℹ️ Помощь']
+    ];
+
+    // Если пользователь админ, добавляем админские кнопки
+    if (isAdminUser) {
+        baseKeyboard.push(
+            ['🔍 Поиск сертификата', '📊 Последние сертификаты'],
+            ['👨‍💼 Админ-помощь']
+        );
+    }
+
+    // Отправляем приветственное сообщение с соответствующей клавиатурой
+    const welcomeMessage = isAdminUser
+        ? 'Добро пожаловать в панель управления FaceClinic! У вас есть доступ к админ-функциям.'
+        : 'Добро пожаловать в FaceClinic! Используйте меню ниже для взаимодействия.';
+
+    bot.sendMessage(chatId, welcomeMessage, {
+        reply_markup: {
+            keyboard: baseKeyboard,
             resize_keyboard: true,
             one_time_keyboard: false,
         },
     });
 });
+
 
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
@@ -210,11 +233,23 @@ bot.on('message', async (msg) => {
         const name = userProgress[chatId].name;
         const certificateNumber = generateCertificateNumber();
 
+
         try {
             db.prepare(`
                 INSERT INTO certificates (certificate_number, telegram_id, name, phone)
                 VALUES (?, ?, ?, ?)
             `).run(certificateNumber, chatId, name, phone);
+
+            // Добавляем запись в Google Sheets
+            const certificateData = {
+                certificate_number: certificateNumber,
+                telegram_id: chatId,
+                name,
+                phone,
+                created_at: new Date().toISOString()
+            };
+
+            await addCertificateToSheet(certificateData);
 
             const certificateText = `
 🎉 Поздравляем! Вы получили персональный сертификат на сумму 10 000 рублей.
@@ -320,6 +355,308 @@ bot.on('message', async (msg) => {
     }
 
     bot.sendMessage(chatId, 'Пожалуйста, используйте меню ниже.');
+});
+
+// Функция нормализации номера телефона
+function normalizePhone(phone) {
+    // Убираем все кроме цифр
+    let cleaned = phone.replace(/\D/g, '');
+
+    // Если номер начинается с 8, заменяем на 7
+    if (cleaned.startsWith('8')) {
+        cleaned = '7' + cleaned.slice(1);
+    }
+
+    // Если номер не начинается с 7, добавляем 7
+    if (!cleaned.startsWith('7')) {
+        cleaned = '7' + cleaned;
+    }
+
+    // Проверяем длину
+    if (cleaned.length !== 11) {
+        return null;
+    }
+
+    return cleaned;
+}
+
+// Функция нормализации номера сертификата
+function normalizeCertNumber(cert) {
+    // Приводим к верхнему регистру и убираем лишние пробелы
+    return cert.trim().toUpperCase();
+}
+
+// Обновленная команда проверки сертификата
+bot.onText(/\/check_cert (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+
+    if (!isAdmin(chatId)) {
+        return bot.sendMessage(chatId, '❌ У вас нет прав администратора');
+    }
+
+    const certNumber = normalizeCertNumber(match[1]);
+
+    try {
+        // Используем LIKE для поиска без учета регистра
+        const result = db.prepare(`
+            SELECT c.*, 
+                   datetime(c.created_at, 'localtime') as local_time
+            FROM certificates c 
+            WHERE UPPER(certificate_number) LIKE UPPER(?)
+        `).get(certNumber);
+
+        if (result) {
+            const message = `
+📜 Информация о сертификате:
+Номер: ${result.certificate_number}
+Telegram ID: ${result.telegram_id}
+Имя: ${result.name || 'Не указано'}
+Телефон: ${result.phone || 'Не указан'}
+Дата выдачи: ${result.local_time}
+            `;
+            bot.sendMessage(chatId, message);
+        } else {
+            // Попробуем найти похожие сертификаты
+            const similarResults = db.prepare(`
+                SELECT certificate_number
+                FROM certificates 
+                WHERE UPPER(certificate_number) LIKE UPPER(?)
+                LIMIT 5
+            `).all(`%${certNumber}%`);
+
+            let message = '❌ Точное совпадение не найдено.';
+            if (similarResults.length > 0) {
+                message += '\nПохожие сертификаты:\n' +
+                    similarResults.map(r => r.certificate_number).join('\n');
+            }
+            bot.sendMessage(chatId, message);
+        }
+    } catch (error) {
+        console.error('Error checking certificate:', error);
+        bot.sendMessage(chatId, '❌ Ошибка при проверке сертификата');
+    }
+});
+
+// Обновленная команда проверки по телефону
+bot.onText(/\/check_phone (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+
+    if (!isAdmin(chatId)) {
+        return bot.sendMessage(chatId, '❌ У вас нет прав администратора');
+    }
+
+    const rawPhone = match[1];
+    const normalizedPhone = normalizePhone(rawPhone);
+
+    if (!normalizedPhone) {
+        return bot.sendMessage(chatId, '❌ Некорректный формат номера телефона');
+    }
+
+    try {
+        // Ищем по нормализованному номеру
+        const results = db.prepare(`
+            SELECT c.*, 
+                   datetime(c.created_at, 'localtime') as local_time
+            FROM certificates c 
+            WHERE phone LIKE ? 
+               OR phone LIKE ? 
+               OR phone LIKE ? 
+               OR phone LIKE ?
+        `).all([
+            `%${normalizedPhone}%`,
+            `%+${normalizedPhone}%`,
+            `%8${normalizedPhone.slice(1)}%`,
+            `%+8${normalizedPhone.slice(1)}%`
+        ]);
+
+        if (results.length > 0) {
+            const messages = results.map(result => `
+📱 Найден сертификат:
+Номер сертификата: ${result.certificate_number}
+Telegram ID: ${result.telegram_id}
+Имя: ${result.name || 'Не указано'}
+Телефон: ${result.phone}
+Дата выдачи: ${result.local_time}
+            `);
+
+            // Отправляем каждый результат отдельным сообщением
+            for (const message of messages) {
+                await bot.sendMessage(chatId, message);
+            }
+
+            if (results.length > 1) {
+                await bot.sendMessage(chatId, `\n⚠️ Найдено ${results.length} сертификатов с этим номером телефона`);
+            }
+        } else {
+            bot.sendMessage(chatId, '❌ Сертификаты с таким номером телефона не найдены');
+        }
+    } catch (error) {
+        console.error('Error checking phone:', error);
+        bot.sendMessage(chatId, '❌ Ошибка при проверке телефона');
+    }
+});
+
+// Добавим быструю проверку по части номера сертификата или телефона
+bot.onText(/\/search (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+
+    if (!isAdmin(chatId)) {
+        return bot.sendMessage(chatId, '❌ У вас нет прав администратора');
+    }
+
+    const query = match[1].trim();
+
+    try {
+        // Ищем и по номеру сертификата, и по телефону
+        const results = db.prepare(`
+            SELECT *, 
+                   datetime(created_at, 'localtime') as local_time
+            FROM certificates 
+            WHERE UPPER(certificate_number) LIKE UPPER(?)
+               OR phone LIKE ?
+            LIMIT 5
+        `).all([`%${query}%`, `%${query}%`]);
+
+        if (results.length > 0) {
+            const message = results.map(cert => `
+🔍 Найдено совпадение:
+Сертификат: ${cert.certificate_number}
+Имя: ${cert.name || 'Не указано'}
+Телефон: ${cert.phone || 'Не указан'}
+Дата: ${cert.local_time}
+            `).join('\n---\n');
+
+            await bot.sendMessage(chatId, message);
+
+            if (results.length === 5) {
+                await bot.sendMessage(chatId, '⚠️ Показаны только первые 5 результатов. Уточните поиск для более точных результатов.');
+            }
+        } else {
+            bot.sendMessage(chatId, '❌ Ничего не найдено');
+        }
+    } catch (error) {
+        console.error('Error searching:', error);
+        bot.sendMessage(chatId, '❌ Ошибка при поиске');
+    }
+});
+
+
+bot.on('message', async (msg) => {
+    const chatId = msg.chat.id;
+    const text = msg.text;
+
+    if (!isAdmin(chatId)) return;
+
+    switch (text) {
+        case '🔍 Поиск сертификата':
+            bot.sendMessage(chatId, `
+Введите одну из команд для поиска:
+
+/search [текст] - быстрый поиск по номеру или телефону
+/check_cert [номер] - поиск по номеру сертификата
+/check_phone [телефон] - поиск по телефону
+/sync_sheets - синхронизировать все сертификаты с Google Sheets
+
+Примеры:
+/search ABCD
+/check_cert Tel2025-ABCD
+/check_phone 89001234567
+            `);
+            break;
+
+        case '📊 Последние сертификаты':
+            // Автоматически показываем последние 5 сертификатов
+            const command = '/last_certs 5';
+            msg.text = command;
+            bot.emit('text', msg, [command, '5']);
+            break;
+
+        case '👨‍💼 Админ-помощь':
+            const helpMessage = `
+Доступные команды администратора:
+
+/check_cert [номер] - проверить сертификат по номеру
+Примеры: 
+- /check_cert Tel2025-ABCD1234
+- /check_cert tel2025-abcd1234
+- /check_cert ABCD1234
+
+/check_phone [телефон] - поиск по номеру телефона
+Примеры:
+- /check_phone +79001234567
+- /check_phone 89001234567
+- /check_phone 9001234567
+
+/search [текст] - быстрый поиск по части номера сертификата или телефона
+Примеры:
+- /search ABCD
+- /search 9001
+
+/last_certs [количество] - показать последние сертификаты
+Пример: /last_certs 5
+            `;
+            bot.sendMessage(chatId, helpMessage);
+            break;
+    }
+});
+
+bot.onText(/\/last_certs (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+
+    if (!isAdmin(chatId)) {
+        return bot.sendMessage(chatId, '❌ У вас нет прав администратора');
+    }
+
+    const limit = parseInt(match[1]) || 5; // По умолчанию 5 записей
+
+    try {
+        const results = db.prepare(`
+            SELECT *, 
+                   datetime(created_at, 'localtime') as local_time
+            FROM certificates 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        `).all(limit);
+
+        if (results.length > 0) {
+            const message = results.map(cert => `
+📜 Сертификат: ${cert.certificate_number}
+👤 Имя: ${cert.name || 'Не указано'}
+📱 Телефон: ${cert.phone || 'Не указан'}
+🕒 Выдан: ${cert.local_time}
+            `).join('\n---\n');
+
+            bot.sendMessage(chatId, `Последние ${limit} выданных сертификатов:\n${message}`);
+        } else {
+            bot.sendMessage(chatId, '❌ Сертификаты не найдены');
+        }
+    } catch (error) {
+        console.error('Error getting last certificates:', error);
+        bot.sendMessage(chatId, '❌ Ошибка при получении списка сертификатов');
+    }
+});
+
+// Добавьте новую админ-команду для синхронизации
+bot.onText(/\/sync_sheets/, async (msg) => {
+    const chatId = msg.chat.id;
+
+    if (!isAdmin(chatId)) {
+        return bot.sendMessage(chatId, '❌ У вас нет прав администратора');
+    }
+
+    try {
+        await bot.sendMessage(chatId, '🔄 Начинаем синхронизацию с Google Sheets...');
+        const success = await syncAllCertificates(db);
+
+        if (success) {
+            await bot.sendMessage(chatId, '✅ Синхронизация успешно завершена');
+        } else {
+            await bot.sendMessage(chatId, '❌ Ошибка при синхронизации');
+        }
+    } catch (error) {
+        console.error('Sync error:', error);
+        await bot.sendMessage(chatId, '❌ Произошла ошибка при синхронизации');
+    }
 });
 
 app.listen(PORT, () => {
