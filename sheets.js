@@ -4,12 +4,22 @@ import path from 'path';
 import 'dotenv/config';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
+
+// Проверяем наличие всех необходимых переменных
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : '';
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
+const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
+
+if (!GOOGLE_PRIVATE_KEY || !GOOGLE_SHEET_ID || !GOOGLE_CLIENT_EMAIL) {
+    console.error('❌ Отсутствуют необходимые переменные окружения для Google Sheets:');
+    console.log('GOOGLE_PRIVATE_KEY:', GOOGLE_PRIVATE_KEY ? 'Установлен' : 'Отсутствует');
+    console.log('GOOGLE_SHEET_ID:', GOOGLE_SHEET_ID ? 'Установлен' : 'Отсутствует');
+    console.log('GOOGLE_CLIENT_EMAIL:', GOOGLE_CLIENT_EMAIL ? 'Установлен' : 'Отсутствует');
+}
 
 const auth = new google.auth.GoogleAuth({
     credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        client_email: GOOGLE_CLIENT_EMAIL,
         private_key: GOOGLE_PRIVATE_KEY,
     },
     scopes: SCOPES,
@@ -61,13 +71,13 @@ export async function syncAllCertificates(db) {
     try {
         // Получаем все сертификаты из БД
         const certificates = db.prepare(`
-            SELECT 
+            SELECT
                 certificate_number,
                 telegram_id,
                 name,
                 phone,
                 datetime(created_at, 'localtime') as created_at
-            FROM certificates 
+            FROM certificates
             ORDER BY created_at DESC
         `).all();
 
@@ -108,49 +118,64 @@ export async function syncAllCertificates(db) {
 // Функция для создания и настройки таблицы
 export async function setupGoogleSheet() {
     try {
-        // Проверяем существование таблицы
-        await sheets.spreadsheets.get({
-            spreadsheetId: GOOGLE_SHEET_ID
-        });
+        // Проверяем наличие всех необходимых переменных
+        if (!GOOGLE_PRIVATE_KEY || !GOOGLE_SHEET_ID || !GOOGLE_CLIENT_EMAIL) {
+            console.error('❌ Не все переменные окружения установлены для Google Sheets');
+            return false;
+        }
 
-        // Настраиваем заголовки и форматирование
-        const requests = [{
-            updateSheetProperties: {
-                properties: {
-                    gridProperties: {
-                        frozenRowCount: 1
-                    }
-                },
-                fields: 'gridProperties.frozenRowCount'
+        try {
+            // Проверяем существование таблицы
+            await sheets.spreadsheets.get({
+                spreadsheetId: GOOGLE_SHEET_ID
+            });
+
+            // Настраиваем заголовки и форматирование
+            const requests = [{
+                updateSheetProperties: {
+                    properties: {
+                        gridProperties: {
+                            frozenRowCount: 1
+                        }
+                    },
+                    fields: 'gridProperties.frozenRowCount'
+                }
+            }];
+
+            // Устанавливаем заголовки
+            const headers = [
+                ['Номер сертификата', 'Telegram ID', 'Имя', 'Телефон', 'Дата создания']
+            ];
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId: GOOGLE_SHEET_ID,
+                range: 'Сертификаты!A1:E1',
+                valueInputOption: 'USER_ENTERED',
+                resource: {
+                    values: headers
+                }
+            });
+
+            // Применяем форматирование
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: GOOGLE_SHEET_ID,
+                resource: {
+                    requests
+                }
+            });
+
+            console.log('✅ Google Sheet setup completed successfully');
+            return true;
+        } catch (error) {
+            if (error.code === 404) {
+                console.error('❌ Таблица не найдена. Проверьте GOOGLE_SHEET_ID');
+            } else {
+                console.error('❌ Ошибка при настройке Google Sheet:', error);
             }
-        }];
-
-        // Устанавливаем заголовки
-        const headers = [
-            ['Номер сертификата', 'Telegram ID', 'Имя', 'Телефон', 'Дата создания']
-        ];
-
-        await sheets.spreadsheets.values.update({
-            spreadsheetId: GOOGLE_SHEET_ID,
-            range: 'Сертификаты!A1:E1',
-            valueInputOption: 'USER_ENTERED',
-            resource: {
-                values: headers
-            }
-        });
-
-        // Применяем форматирование
-        await sheets.spreadsheets.batchUpdate({
-            spreadsheetId: GOOGLE_SHEET_ID,
-            resource: {
-                requests
-            }
-        });
-
-        console.log('Google Sheet setup completed');
-        return true;
+            return false;
+        }
     } catch (error) {
-        console.error('Error setting up Google Sheet:', error);
+        console.error('❌ Критическая ошибка при инициализации Google Sheets:', error);
         return false;
     }
 }
