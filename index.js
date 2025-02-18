@@ -279,8 +279,8 @@ function restoreData() {
     try {
         const stmt = db.prepare(`
             INSERT OR IGNORE INTO certificates 
-            (certificate_number, telegram_id, name, phone, created_at, username)
-            VALUES (?, ?, ?, ?, datetime(?), ?)
+            (certificate_number, telegram_id, name, phone, created_at)
+            VALUES (?, ?, ?, ?, datetime(?))
         `);
 
         certificates.forEach(cert => {
