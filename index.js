@@ -636,8 +636,14 @@ bot.onText(/\/last_certs (.+)/, async (msg, match) => {
     }
 });
 
-const GOOGLE_SHEET_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/edit`;
-
+function getGoogleSheetUrl() {
+    const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
+    if (!GOOGLE_SHEET_ID) {
+        console.error('❌ Не удалось найти переменную окружения GOOGLE_SHEET_ID.');
+        return null;
+    }
+    return `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/edit`;
+}
 
 // Добавьте новую админ-команду для синхронизации
 bot.onText(/\/sync_sheets/, async (msg) => {
@@ -652,7 +658,12 @@ bot.onText(/\/sync_sheets/, async (msg) => {
         const success = await syncAllCertificates(db);
 
         if (success) {
-            await bot.sendMessage(chatId, `✅ Синхронизация успешно завершена.\n[Открыть таблицу Google Sheets](${GOOGLE_SHEET_URL})`, {
+            const sheetUrl = getGoogleSheetUrl();
+            const message = sheetUrl
+                ? `✅ Синхронизация успешно завершена.\n[Открыть таблицу Google Sheets](${sheetUrl})`
+                : '✅ Синхронизация успешно завершена.';
+
+            await bot.sendMessage(chatId, message, {
                 parse_mode: 'Markdown',
                 disable_web_page_preview: true
             });
