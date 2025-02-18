@@ -100,7 +100,8 @@ bot.getWebHookInfo().then((info) => {
 }).catch(console.error);
 
 // Подключение к базе данных
-const db = new Database('./certificates.db', { verbose: console.log });
+const db = new Database('/data/certificates.db', { verbose: console.log });
+
 
 function initializeDatabase() {
     db.exec(`
