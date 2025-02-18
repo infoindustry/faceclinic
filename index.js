@@ -289,8 +289,7 @@ function restoreData() {
                 cert.telegram_id,
                 cert.name,
                 cert.phone,
-                cert.date,
-                cert.username
+                cert.date
             );
         });
 
