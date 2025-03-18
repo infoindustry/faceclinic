@@ -1,25 +1,21 @@
 {
-  "name": "faceclinic",
+  "name": "business-express-bot",
   "version": "1.0.0",
+  "description": "Telegram bot for Christian Entrepreneurs",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "npm install -g node-gyp && npm rebuild better-sqlite3 && node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon index.js"
   },
-  "private": true,
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "description": "",
   "dependencies": {
-    "@walletpass/pass-js": "^6.9.1",
     "axios": "^1.7.9",
     "better-sqlite3": "^11.8.0",
     "dotenv": "^16.4.7",
     "express": "^4.18.2",
-    "googleapis": "^144.0.0",
-    "node-telegram-bot-api": "^0.66.0",
-    "openai": "^4.82.0"
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
   }
 }
