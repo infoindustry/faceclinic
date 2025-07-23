@@ -31,6 +31,7 @@ app.post('/webhook', express.json(), (req, res) => {
 const TOKEN = process.env.TOKEN;
 const ADMIN_CHAT_IDS = process.env.ADMIN_CHAT_ID.split(';').map(id => id.trim());console.log('Admin IDs:', ADMIN_CHAT_IDS); // Добавьте эту строку здесь
 const CHANNEL_USERNAME = '@faceclinicmoscowchannel';
+const CERTIFICATES_ACTIVE = false;
 
 console.log('TOKEN:', process.env.TOKEN);
 console.log('ADMIN_CHAT_IDS:', process.env.ADMIN_CHAT_ID);
@@ -368,7 +369,7 @@ bot.onText(/\/start/, (msg) => {
 
     // Базовая клавиатура для всех пользователей
     const baseKeyboard = [
-        ['🔗 Подписаться на канал', '📜 Получить сертификат'],
+        ['🔗 Подписаться на канал'],
         ['✅ Проверить сертификат', 'ℹ️ Помощь']
     ];
 
@@ -480,6 +481,13 @@ bot.on('message', async (msg) => {
     }
 
     if (text === '📜 Получить сертификат') {
+        if (!CERTIFICATES_ACTIVE) {
+            bot.sendMessage(chatId, `
+❌ Извините, акция по выдаче сертификатов завершена.
+Следите за нашим каналом для информации о новых акциях: [FaceClinic Moscow](https://t.me/${CHANNEL_USERNAME.slice(1)})
+        `, { parse_mode: 'Markdown' });
+            return;
+        }
         const isSubscribed = await checkSubscription(chatId);
 
         if (isSubscribed === null) {
