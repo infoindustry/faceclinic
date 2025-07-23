@@ -9,6 +9,7 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@walletpass/pass-js": "^4.0.0",
     "axios": "^1.7.9",
     "better-sqlite3": "^11.8.0",
     "dotenv": "^16.4.7",
